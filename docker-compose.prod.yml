@@ -1,0 +1,88 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: warranty-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: warranty
+      POSTGRES_USER: warranty_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-warranty_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U warranty_user -d warranty"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - warranty-net
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    container_name: warranty-qdrant
+    restart: unless-stopped
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    environment:
+      - QDRANT__SERVICE__GRPC_PORT=6334
+    networks:
+      - warranty-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: warranty-backend
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://warranty_user:${POSTGRES_PASSWORD:-warranty_pass}@postgres:5432/warranty
+      - AI_SERVICE_URL=http://ai-service:8000
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    ports:
+      - "3001:3001"
+    networks:
+      - warranty-net
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: warranty-ai-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - DATABASE_URL=postgresql://warranty_user:${POSTGRES_PASSWORD:-warranty_pass}@postgres:5432/warranty
+      - QDRANT_URL=http://qdrant:6333
+    depends_on:
+      postgres:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
+    ports:
+      - "8000:8000"
+    networks:
+      - warranty-net
+
+volumes:
+  postgres_data:
+  qdrant_data:
+
+networks:
+  warranty-net:
+    driver: bridge
