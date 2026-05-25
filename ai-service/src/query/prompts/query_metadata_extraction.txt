@@ -37,6 +37,8 @@ semantic recall without changing meaning.
   "defect_or_symptom": string | null,
   "mileage": integer | null,
   "mileage_unit": "miles" | "km" | null,
+  "vin": string | null,
+  "chassis_id": string | null,
   "purchase_date": string | null,
   "in_service_date": string | null,
   "rewritten_query": string,
@@ -48,6 +50,14 @@ semantic recall without changing meaning.
 # FIELD GUIDANCE
 - make/model/year: The vehicle or equipment identifiers. year is a single
   4-digit integer if stated; otherwise use year_range.
+
+CRITICAL RULE — DO NOT CONFUSE MILEAGE WITH MODEL YEAR:
+The "year" field must only contain a 4-digit vehicle model year (e.g. 2019, 2023).
+If the user mentions "200,000 miles", "312,000 miles", or any odometer reading,
+that number goes into "mileage" only. Never put a mileage value into "year".
+If you cannot identify a model year with confidence, set year to null.
+Valid year range: 1980–2030. Any number outside that range is NOT a model year.
+
 - country: ISO country name as the user wrote it ("USA", "India",
   "Germany"), null otherwise.
 - warranty_type: A short label only if the user names one (e.g.
@@ -60,6 +70,11 @@ semantic recall without changing meaning.
 - mileage / mileage_unit: Integer odometer reading and its unit, if stated.
   Strip commas. If only "km" or "miles" is implied by region, set unit but
   keep mileage null.
+- vin: Full 17-character Vehicle Identification Number when present in the
+  question. Example: 4V4NC9EH5LN218365. Extract exactly as the user typed it.
+- chassis_id: Chassis or unit ID, typically a 5-6 digit number. When user says
+  "chassis 218365" or "chassis ID NR 218366", extract the numeric part: "218365"
+  or "218366". Do NOT map unit numbers (like "unit 1168") to chassis IDs.
 - purchase_date / in_service_date: ISO-like date string only if explicitly
   stated; otherwise null.
 - rewritten_query: A concise, retrieval-friendly rewrite of the user's
@@ -106,6 +121,8 @@ OUTPUT:
   "defect_or_symptom": null,
   "mileage": 312000,
   "mileage_unit": "miles",
+  "vin": null,
+  "chassis_id": null,
   "purchase_date": null,
   "in_service_date": null,
   "rewritten_query": "Coverage of turbocharger on 2023 Freightliner Cascadia at 312,000 miles.",
@@ -133,6 +150,8 @@ OUTPUT:
   "defect_or_symptom": null,
   "mileage": null,
   "mileage_unit": null,
+  "vin": null,
+  "chassis_id": null,
   "purchase_date": null,
   "in_service_date": null,
   "rewritten_query": "Transmission coverage status for 2021 Toyota Camry.",
@@ -157,12 +176,40 @@ OUTPUT:
   "defect_or_symptom": null,
   "mileage": null,
   "mileage_unit": null,
+  "vin": null,
+  "chassis_id": null,
   "purchase_date": null,
   "in_service_date": null,
   "rewritten_query": "is it covered?",
   "semantic_keywords": [],
   "ambiguity_notes": "No identifiers provided; cannot apply payload filters.",
   "extraction_confidence": 0.15
+}
+
+## Example D
+HISTORY: []
+USER: "Is the turbocharger covered on the Volvo truck with VIN 4V4NC9EH7LN218366?"
+OUTPUT:
+{
+  "make": "Volvo",
+  "model": null,
+  "year": null,
+  "year_range": { "from": null, "to": null },
+  "country": null,
+  "warranty_type": null,
+  "component": "turbocharger",
+  "component_synonyms": ["turbo", "turbo unit", "boost system"],
+  "defect_or_symptom": null,
+  "mileage": null,
+  "mileage_unit": null,
+  "vin": "4V4NC9EH7LN218366",
+  "chassis_id": null,
+  "purchase_date": null,
+  "in_service_date": null,
+  "rewritten_query": "Turbocharger warranty coverage for Volvo truck VIN 4V4NC9EH7LN218366",
+  "semantic_keywords": ["turbocharger", "turbo", "powertrain", "volvo", "4V4NC9EH7LN218366"],
+  "ambiguity_notes": "Model and year not stated; VIN may identify them.",
+  "extraction_confidence": 0.85
 }
 
 # FINAL REMINDER

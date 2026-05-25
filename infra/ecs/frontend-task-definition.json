@@ -1,0 +1,15 @@
+{
+  "family": "warranty-frontend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [
+    {
+      "name": "frontend",
+      "image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/warranty-frontend:latest",
+      "portMappings": [{ "containerPort": 3000, "hostPort": 3000, "protocol": "tcp" }],
+      "environment": []
+    }
+  ]
+}

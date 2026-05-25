@@ -1,0 +1,15 @@
+{
+  "family": "warranty-backend",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [
+    {
+      "name": "backend",
+      "image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/warranty-backend:latest",
+      "portMappings": [{ "containerPort": 3001, "hostPort": 3001, "protocol": "tcp" }],
+      "environment": []
+    }
+  ]
+}

@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     retrieval_score_threshold: float = 0.01
     retrieval_min_chunks: int = 3
     retrieval_retry_top_k: int = 50
+    strict_metadata_filters: bool = False
 
 
 settings = Settings()

@@ -1,11 +1,14 @@
+import logging
+
 from .intent_classifier import classify_intent
-from .metadata_filter import extract_metadata_filters, qdrant_filters_from_metadata
+from .metadata_filter import extract_metadata_filters, qdrant_filters_from_metadata, _is_valid_year
 from ..config import settings
 from ..services.reranker_service import is_list_or_filter_question
 from ..services.structured_query_engine import is_simple_retrieval_query, is_structured_query
 from .query_mode import is_hallucination_probe
 from .retriever import retrieve_chunks
 from .reasoner import reason_over_evidence
+logger = logging.getLogger(__name__)
 
 GREETING_REPLY = (
     "Hi! I'm your Fixyee warranty assistant. "
@@ -105,6 +108,22 @@ async def answer_question(question: str, conversation_history: list[dict]) -> di
 
     metadata = extract_metadata_filters(question, conversation_history)
     filters = qdrant_filters_from_metadata(metadata)
+
+    logger.info(
+        "Query filters applied: %s | Query: %.80s | "
+        "Extracted metadata: make=%s, model=%s, year=%s (valid=%s), "
+        "mileage=%s, vin=%s, chassisId=%s",
+        filters,
+        question,
+        metadata.get("make"),
+        metadata.get("model"),
+        metadata.get("year"),
+        _is_valid_year(metadata.get("year")),
+        metadata.get("mileage"),
+        metadata.get("vin"),
+        metadata.get("chassis_id") or metadata.get("chassisId"),
+    )
+
     list_mode = is_list_or_filter_question(question)
     table_mode = (
         list_mode

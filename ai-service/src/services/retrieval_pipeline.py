@@ -18,7 +18,7 @@ from .retrieval_utils import (
     wrap_scored_point,
 )
 from .sparse_encoder import BM25SparseEncoder
-from .structured_query_engine import apply_structured_filters, is_structured_query, parse_structured_constraints
+from .structured_query_engine import apply_structured_filters, is_structured_query, is_simple_retrieval_query, parse_structured_constraints
 from .warranty_code_utils import enrich_metadata_with_codes, extract_warranty_codes
 
 logger = logging.getLogger("retrieval_pipeline")
@@ -230,7 +230,11 @@ def retrieve_with_pipeline(
         if not payload.get("structuredMeta"):
             payload["structuredMeta"] = parse_chunk_structured_meta(payload)
 
-    if settings.enable_structured_reasoning and is_structured_query(question):
+    # Gate structured filtering: skip for simple coverage lookups ("is X covered?")
+    # to let the reasoner evaluate date/mileage eligibility from evidence.
+    if (settings.enable_structured_reasoning
+            and is_structured_query(question)
+            and not is_simple_retrieval_query(question)):
         constraints = parse_structured_constraints(question)
         filtered = apply_structured_filters(chunks, constraints)
         trace["structured_constraints"] = constraints
@@ -239,4 +243,9 @@ def retrieve_with_pipeline(
 
     chunks = expand_parents_for_reasoning(chunks)
     trace["final_chunks"] = len(chunks)
+
+    logger.info(
+        "Retrieval complete: %d chunks | filters=%s | question=%.80s",
+        len(chunks), filters, question,
+    )
     return chunks, trace

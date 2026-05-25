@@ -33,6 +33,8 @@ your output before the document is certified.
   "make": string | null,
   "model": string | null,
   "year": integer | null,
+  "vin": string | null,
+  "chassis_id": string | null,
   "warranty_type": string | null,
   "country": string | null,
   "coverage_period": {
@@ -57,6 +59,10 @@ your output before the document is certified.
 - make: Manufacturer brand (e.g. "Freightliner", "Toyota", "Caterpillar").
 - model: Model/series name (e.g. "Cascadia", "Camry XLE").
 - year: 4-digit model year integer; null if a range or unspecified.
+- vin: Full 17-character Vehicle Identification Number if present in the
+  document header. Example: 4V4NC9EH5LN218365. Extract exactly as printed.
+- chassis_id: Chassis/unit ID number, typically 5-6 digits. Often appears as
+  "Chassis ID NR 218365" → extract as "218365". Strip "NR" prefix and whitespace.
 - warranty_type: One short canonical label such as "basic", "powertrain",
   "extended", "emissions", "corrosion", "hybrid_battery", "commercial_fleet".
   If the document uses a different but clear label, use the document's exact
@@ -120,6 +126,8 @@ OUTPUT:
   "make": "Freightliner",
   "model": "Cascadia",
   "year": 2023,
+  "vin": null,
+  "chassis_id": null,
   "warranty_type": "Limited Powertrain Warranty",
   "country": "USA",
   "coverage_period": {
@@ -154,6 +162,8 @@ OUTPUT:
   "make": null,
   "model": null,
   "year": null,
+  "vin": null,
+  "chassis_id": null,
   "warranty_type": null,
   "country": null,
   "coverage_period": { "duration": null, "mileage_limit": null, "starts_from": null },

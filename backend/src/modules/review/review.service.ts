@@ -103,7 +103,27 @@ export class ReviewService {
     const document = await this.documentsService.getDocument(documentId);
     const toKey = `certified/${document.country || "unknown"}/${document.make || "unknown"}/${document.model || "unknown"}/${document.year || "unknown"}/${documentId}/original.pdf`;
     this.logger.log(`adminApprove moving s3 ${document.s3Path} -> ${toKey}`);
-    await this.s3Service.moveObject(document.s3Path, toKey);
+
+    // Verify source exists before moving; handle path inconsistencies
+    const sourceExists = await this.s3Service.objectExists(document.s3Path);
+    const destExists = await this.s3Service.objectExists(toKey);
+
+    if (destExists) {
+      this.logger.log(`adminApprove: file already at destination ${toKey}, skipping move`);
+    } else if (sourceExists) {
+      await this.s3Service.moveObject(document.s3Path, toKey);
+    } else {
+      // Try alternate source paths (private-session vs pending-review)
+      const altKey = document.s3Path.replace("pending-review/", "private-session/");
+      const altExists = await this.s3Service.objectExists(altKey);
+      if (altExists) {
+        this.logger.warn(`adminApprove: source at alternate path ${altKey}, moving from there`);
+        await this.s3Service.moveObject(altKey, toKey);
+      } else {
+        this.logger.error(`adminApprove: source file not found at ${document.s3Path} or ${altKey}`);
+        throw new NotFoundException(`Source file not found in S3 for document ${documentId}`);
+      }
+    }
     Object.assign(document, {
       s3Path: toKey,
       currentRepository: DocumentRepository.CERTIFIED

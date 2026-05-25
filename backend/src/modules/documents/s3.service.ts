@@ -1,4 +1,4 @@
-import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand, DeleteObjectCommand, CopyObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { Injectable } from "@nestjs/common";
 import { s3Client } from "../../config/aws.config";
@@ -34,6 +34,16 @@ export class S3Service {
   async deleteObject(key: string): Promise<void> {
     // This function deletes a file from S3.
     await s3Client.send(new DeleteObjectCommand({ Bucket: this.bucketName, Key: key }));
+  }
+
+  async objectExists(key: string): Promise<boolean> {
+    // This function checks if a file exists in S3 without downloading it.
+    try {
+      await s3Client.send(new HeadObjectCommand({ Bucket: this.bucketName, Key: key }));
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async getSignedUrl(key: string, expiresIn = 300): Promise<string> {

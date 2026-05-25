@@ -1,0 +1,2 @@
+# This directory is mounted by docker-compose for AI service logs.
+# Keep empty in git.

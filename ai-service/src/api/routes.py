@@ -58,6 +58,16 @@ async def set_repository(document_id: str, payload: SetRepositoryRequest) -> dic
     try:
         qdrant = QdrantService()
         updated = qdrant.update_repository(document_id, payload.repository)
+
+        if updated == 0:
+            # Document ID was not found in Qdrant at all.
+            # This can happen if processing failed or document was never indexed.
+            raise HTTPException(
+                status_code=404,
+                detail=f"No chunks found in Qdrant for document {document_id}. "
+                       f"Document may not have been processed yet.",
+            )
+
         logger.info(
             "[set-repository] documentId=%s repository=%s updatedChunks=%d",
             document_id,
@@ -65,11 +75,13 @@ async def set_repository(document_id: str, payload: SetRepositoryRequest) -> dic
             updated,
         )
         return {
-            "status": "ok",
+            "success": True,
             "documentId": document_id,
             "repository": payload.repository,
             "updatedChunks": updated,
         }
+    except HTTPException:
+        raise
     except Exception as exc:
         logger.exception(
             "[set-repository] failed documentId=%s repository=%s error=%s",

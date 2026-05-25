@@ -40,6 +40,34 @@ VEHICLE_HEADER_RE = re.compile(
     re.IGNORECASE,
 )
 
+# --- VIN / Chassis parsing (used by pipeline_orchestrator for payload enrichment) ---
+
+_VIN_RE = re.compile(r"\b([A-HJ-NPR-Z0-9]{17})\b")
+_CHASSIS_RE = re.compile(
+    r"(?:Chassis|Unit)\s*(?:ID)?\s*(?:NR?\.?\s*)(\d{5,6})",
+    re.IGNORECASE,
+)
+
+
+def parse_vin_chassis_from_text(text: str) -> dict:
+    """Extract VIN and chassis ID from raw OCR text using regex.
+
+    Returns dict with keys 'vin' (str|None) and 'chassis_id' (str|None).
+    VIN: any 17-char alphanumeric (excluding I, O, Q per ISO 3779).
+    Chassis: 5-6 digit number following 'Chassis ID' or 'Unit' label.
+    """
+    result: dict = {"vin": None, "chassis_id": None}
+
+    vin_match = _VIN_RE.search(text[:3000])  # VIN typically in first pages
+    if vin_match:
+        result["vin"] = vin_match.group(1)
+
+    chassis_match = _CHASSIS_RE.search(text[:3000])
+    if chassis_match:
+        result["chassis_id"] = chassis_match.group(1)
+
+    return result
+
 
 class TiktokenChunker:
     SEPARATORS = ["\n\n", "\n", ". ", ", ", " "]

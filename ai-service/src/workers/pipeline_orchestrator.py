@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from pathlib import Path
 
 from sqlalchemy import text
@@ -13,6 +14,7 @@ from ..services.chunking_service import chunk_pages, chunk_text
 from ..services.coverage_row_parser import parse_chunk_structured_meta
 from ..services.embedding_service import prepare_chunks_for_upsert
 from ..services.qdrant_service import QdrantService
+from ..services.strategic_chunker import parse_vin_chassis_from_text
 
 logger = logging.getLogger("pipeline")
 logger.setLevel(logging.INFO)
@@ -71,6 +73,41 @@ async def process_document(document_id: str, s3_path: str | None = None) -> None
             metadata.get("model"),
             metadata.get("year"),
             len(plain_text),
+        )
+
+        # --- VIN/chassis regex fallback (LLM may miss these) ---
+        regex_parsed = parse_vin_chassis_from_text(plain_text)
+        if not metadata.get("vin") and regex_parsed.get("vin"):
+            metadata["vin"] = regex_parsed["vin"]
+            logger.info("[%s] VIN from regex fallback: %s", document_id, metadata["vin"])
+        if not metadata.get("chassis_id") and regex_parsed.get("chassis_id"):
+            metadata["chassis_id"] = regex_parsed["chassis_id"]
+            logger.info("[%s] Chassis from regex fallback: %s", document_id, metadata["chassis_id"])
+
+        # --- Derive year from effective_date if LLM didn't extract year ---
+        if not metadata.get("year") and metadata.get("effective_date"):
+            try:
+                metadata["year"] = int(str(metadata["effective_date"])[:4])
+                logger.info("[%s] Year derived from effective_date: %s", document_id, metadata["year"])
+            except (ValueError, TypeError):
+                pass
+
+        # --- Normalize make/model for consistent Qdrant filtering ---
+        raw_make = metadata.get("make") or ""
+        if raw_make.lower() in ("volvo", "volvo truck", "volvo trucks"):
+            metadata["make"] = "Volvo Truck"
+        raw_model = metadata.get("model") or ""
+        if raw_model:
+            metadata["model"] = re.sub(r"\s+N$", "", raw_model).strip()
+
+        logger.info(
+            "[%s] Post-processed metadata: make=%s model=%s year=%s vin=%s chassis=%s",
+            document_id,
+            metadata.get("make"),
+            metadata.get("model"),
+            metadata.get("year"),
+            metadata.get("vin"),
+            metadata.get("chassis_id"),
         )
 
         with SessionLocal() as session:

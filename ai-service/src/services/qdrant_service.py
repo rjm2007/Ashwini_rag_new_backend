@@ -63,6 +63,8 @@ class QdrantService:
                 ("chunkRole", PayloadSchemaType.KEYWORD),
                 ("sectionId", PayloadSchemaType.KEYWORD),
                 ("parentChunkId", PayloadSchemaType.KEYWORD),
+                ("vin", PayloadSchemaType.KEYWORD),
+                ("chassisId", PayloadSchemaType.KEYWORD),
             ]:
                 try:
                     self.client.create_payload_index(
@@ -121,8 +123,25 @@ class QdrantService:
 
     def _build_filter(self, filters: dict | None) -> Filter:
         conditions = [FieldCondition(key="repository", match=MatchValue(value="certified"))]
-        for key, value in (filters or {}).items():
+        filters = filters or {}
+
+        # When VIN or chassisId is present, they're sufficient to identify the document.
+        # Skip make/model/year/country/warrantyType to avoid false-zero AND mismatches
+        # (e.g. warrantyType "standard engine" is not stored on chunk payloads).
+        has_vin = filters.get("vin") is not None
+        has_chassis = filters.get("chassisId") is not None
+
+        for key, value in filters.items():
             if key not in self.SEARCHABLE_KEYS or value is None:
+                continue
+            # When VIN/chassis present, skip redundant filters
+            if (has_vin or has_chassis) and key in (
+                "make",
+                "model",
+                "year",
+                "country",
+                "warrantyType",
+            ):
                 continue
             if isinstance(value, float) and value.is_integer():
                 value = int(value)

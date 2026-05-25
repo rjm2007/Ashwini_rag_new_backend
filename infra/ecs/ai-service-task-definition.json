@@ -1,0 +1,15 @@
+{
+  "family": "warranty-ai-service",
+  "networkMode": "awsvpc",
+  "requiresCompatibilities": ["FARGATE"],
+  "cpu": "512",
+  "memory": "1024",
+  "containerDefinitions": [
+    {
+      "name": "ai-service",
+      "image": "123456789012.dkr.ecr.us-east-1.amazonaws.com/warranty-ai-service:latest",
+      "portMappings": [{ "containerPort": 8000, "hostPort": 8000, "protocol": "tcp" }],
+      "environment": []
+    }
+  ]
+}
