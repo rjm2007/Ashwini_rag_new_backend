@@ -22,6 +22,17 @@ SYMPTOM_HINTS: dict[str, list[str]] = {
     "emission": ["EPA17", "U06B", "emission"],
     "driveline": ["U050", "driveline"],
     "turbo": ["turbocharger", "turbo"],
+    # --- added: engine sub-components fold into the engine assembly coverage ---
+    "fuel rail": ["U06", "U06A", "engine", "fuel system"],
+    "fuel pressure": ["U06", "U06A", "engine", "fuel system"],
+    "fuel injector": ["U06", "U06A", "engine", "fuel system"],
+    "injector": ["U06", "U06A", "engine"],
+    "fuel pump": ["U06", "U06A", "engine", "fuel system"],
+    "egr": ["U06B", "EPA17", "emission"],
+    "aftertreatment": ["ET460", "U13", "emission"],
+    "dpf": ["ET460", "U13", "emission"],
+    "water pump": ["U06", "U06A", "engine"],
+    "alternator": ["U06", "engine"],
 }
 
 # When OCR omits a label but related rows exist (e.g. EPA17 → U06A / GHG text)

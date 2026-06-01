@@ -3,6 +3,7 @@ import logging
 from .intent_classifier import classify_intent
 from .metadata_filter import extract_metadata_filters, qdrant_filters_from_metadata, _is_valid_year
 from ..config import settings
+from ..services.aggregation_engine import is_aggregation_query, aggregate
 from ..services.reranker_service import is_list_or_filter_question
 from ..services.structured_query_engine import is_simple_retrieval_query, is_structured_query
 from .query_mode import is_hallucination_probe
@@ -62,6 +63,11 @@ async def answer_question(question: str, conversation_history: list[dict]) -> di
             "filters": {},
             "intent": "greeting_or_smalltalk",
         }
+
+    # Count / group-by / "all vehicles" → deterministic full-scan, not retrieval.
+    if is_aggregation_query(question):
+        logger.info("Aggregation path engaged for question: %.80s", question)
+        return aggregate(question)
 
     classification = classify_intent(question, conversation_history)
     intent = classification.get("intent", "warranty_coverage")

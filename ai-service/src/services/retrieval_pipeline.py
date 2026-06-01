@@ -192,6 +192,8 @@ def retrieve_with_pipeline(
     qdrant = QdrantService()
 
     fetch_k = min(max(top_k * 5, 30), settings.retrieval_retry_top_k)
+    if list_mode:
+        fetch_k = max(fetch_k, 60)
 
     # Phase 3: coverage-code fast path
     codes = metadata.get("warranty_codes") or extract_warranty_codes(question)
@@ -220,7 +222,11 @@ def retrieve_with_pipeline(
 
     all_points = rerank_with_lexical_boost(all_points, question, metadata)
     all_points = rerank_points(question, all_points, metadata, list_mode=list_mode)
-    all_points = dedupe_search_results(all_points, top_k)
+    if list_mode:
+        # Enumeration questions need every row of a coverage table, not top-k.
+        all_points = dedupe_search_results(all_points, max(top_k, 40), max_per_doc_page=40)
+    else:
+        all_points = dedupe_search_results(all_points, top_k)
 
     chunks = [{"score": item.score, "payload": item.payload} for item in all_points]
 

@@ -64,5 +64,13 @@ extract rows from coverage_table chunks when present.
 - For numeric filters (e.g. "above 500,000 miles"): only include rows where
   the mileage number appears in evidence; show the comparison in reasoning.
 
+# EXCLUSION QUESTIONS
+- These coverage exports list COVERED items only and contain no exclusion
+  section. If the user asks what is excluded and no exclusion clause appears
+  in evidence, answer: "This coverage export lists covered items only and does
+  not contain an exclusions section; exclusions, if any, live in the master
+  warranty policy document, not this export." Set coverage_decision
+  "insufficient_evidence". Do not imply the document is incomplete or broken.
+
 # FINAL REMINDER
 Return JSON only. No markdown fences.
