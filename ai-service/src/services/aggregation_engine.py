@@ -26,6 +26,7 @@ _COUNT_RE = re.compile(r"\b(how many|number of|count|total)\b", re.IGNORECASE)
 _GROUP_RE = re.compile(r"\b(?:by|per)\s+(make|model|year|model\s*year|vehicle|vin|chassis)\b", re.IGNORECASE)
 _ALL_RE = re.compile(r"\ball\s+(vehicles?|trucks?|warranties|coverages?|documents?)\b", re.IGNORECASE)
 _WARRANTY_WORD_RE = re.compile(r"\b(warrant\w*|coverage\w*|vehicle\w*|truck\w*|document\w*)\b", re.IGNORECASE)
+_EXCLUSION_RE = re.compile(r"\b(excluded?|not covered|exclusions?|what is not)\b", re.IGNORECASE)
 
 # VIN / chassis extraction from question
 _VIN_RE = re.compile(r"\b([A-HJ-NPR-Z0-9]{17})\b")
@@ -43,8 +44,10 @@ _VIN_YEAR = {
 
 
 def is_aggregation_query(question: str) -> bool:
-    """True for count / group-by / all-vehicles questions that need a full scan."""
+    """True for count / group-by / all-vehicles / exclusion questions that need a full scan."""
     q = question or ""
+    if _EXCLUSION_RE.search(q):
+        return True
     if _GROUP_RE.search(q):
         return True
     if _COUNT_RE.search(q) and _WARRANTY_WORD_RE.search(q):
@@ -55,18 +58,20 @@ def is_aggregation_query(question: str) -> bool:
 
 
 def _detect_group_key(question: str) -> str | None:
-    m = _GROUP_RE.search(question or "")
-    if not m:
-        return None
-    key = m.group(1).lower().replace(" ", "")
-    if key in ("modelyear", "year"):
+    q = (question or "").lower()
+    has_year = bool(re.search(r"\byear\b", q))
+    has_make = bool(re.search(r"\bmake\b", q))
+    has_model = bool(re.search(r"\bmodel\b", q))
+    has_vehicle = bool(re.search(r"\b(vehicle|vin|chassis)\b", q))
+
+    if has_year:
         return "year"
-    if key in ("make",):
-        return "make"
-    if key in ("model",):
-        return "model"
-    if key in ("vehicle", "vin", "chassis"):
+    if has_vehicle:
         return "vehicle"
+    if has_model:
+        return "model"
+    if has_make:
+        return "make"
     return None
 
 
@@ -208,6 +213,15 @@ def aggregate(question: str) -> dict:
     scope = _extract_scope(question)
     docs = _filter_docs_by_scope(all_docs, scope)
     is_scoped = bool(scope) and len(docs) < len(all_docs)
+
+    # ---- exclusion question ----
+    if _EXCLUSION_RE.search(question):
+        return _wrap(
+            "These warranty exports list covered items only and contain no "
+            "exclusion section. Exclusions, if any, are defined in the master "
+            "Volvo warranty policy document, not in these VDA+ coverage exports.",
+            docs,
+        )
 
     group_key = _detect_group_key(question)
     total_docs = len(docs)

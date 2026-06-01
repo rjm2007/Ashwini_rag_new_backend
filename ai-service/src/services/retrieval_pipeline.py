@@ -193,7 +193,7 @@ def retrieve_with_pipeline(
 
     fetch_k = min(max(top_k * 5, 30), settings.retrieval_retry_top_k)
     if list_mode:
-        fetch_k = max(fetch_k, 60)
+        fetch_k = max(fetch_k, 100)
 
     # Phase 3: coverage-code fast path
     codes = metadata.get("warranty_codes") or extract_warranty_codes(question)

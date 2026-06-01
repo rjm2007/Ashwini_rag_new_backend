@@ -22,8 +22,13 @@ logger = logging.getLogger("strategic_chunker")
 
 # Coverage claim rows: U050 | Driveline: ... | 36 Months/350,000 Miles
 COVERAGE_ROW_RE = re.compile(
-    r"^U\d{3,4}\s*\|",
+    r"^(?:U\d{3,4}[A-Z]?|D\d{4}|ET\d{3}|E\d{3,4}|G\d{2,3}|HAC\d{2,3}|TOW\d+|Z\d{3,4})\s*[\|]",
     re.MULTILINE | re.IGNORECASE,
+)
+# Lines starting with any known code prefix (fallback for non-pipe OCR output)
+_ANY_CODE_LINE_RE = re.compile(
+    r"^(?:U\d{3,4}[A-Z]?|D\d{4}|ET\d{3}|E\d{3,4}|G\d{2,3}|HAC\d{2,3}|TOW\d+|Z\d{3,4})\b",
+    re.IGNORECASE,
 )
 # Alternate table lines with embedded months/miles
 COVERAGE_LINE_RE = re.compile(
@@ -404,7 +409,7 @@ def _extract_coverage_rows(text: str) -> list[str]:
         line = line.strip()
         if not line:
             continue
-        if COVERAGE_ROW_RE.match(line) or (
+        if COVERAGE_ROW_RE.match(line) or _ANY_CODE_LINE_RE.match(line) or (
             COVERAGE_LINE_RE.search(line) and "|" in line
         ):
             rows.append(line)
@@ -508,7 +513,21 @@ def _extract_vehicle_header(pages: list[dict]) -> str:
 
 
 def _extract_u_codes(text: str) -> list[str]:
-    return sorted(set(re.findall(r"\bU\d{3,4}\b", text, flags=re.IGNORECASE)))
+    """Extract all warranty coverage codes (U, D, ET, E, G, HAC, TOW, Z)."""
+    patterns = [
+        r"\bU\d{3,4}[A-Z]?\b",
+        r"\bD\d{4}\b",
+        r"\bET\d{3}\b",
+        r"\bE\d{3,4}\b",
+        r"\bG\d{2,3}\b",
+        r"\bHAC\d{2,3}\b",
+        r"\bTOW\d+\b",
+        r"\bZ\d{3,4}\b",
+    ]
+    codes: set[str] = set()
+    for pat in patterns:
+        codes.update(re.findall(pat, text, flags=re.IGNORECASE))
+    return sorted(codes, key=str.upper)
 
 
 def _infer_heading(text: str) -> str:

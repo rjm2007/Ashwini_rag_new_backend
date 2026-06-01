@@ -172,12 +172,13 @@ and per-factor confidence scores.
 - For multi-condition filters (years, mileage caps, calendar years), only apply
   arithmetic when the evidence states the numbers; show your comparison briefly
   in reasoning. If evidence lacks a field, say so instead of guessing.
-- If the user names a SUB-COMPONENT not listed verbatim (e.g. "fuel rail",
-  "injector", "water pump") but an evidence row covers the parent assembly
-  (e.g. U06 Standard Engine Warranty, U06A Major Engine Components), answer
-  that the part is not separately itemized and state which assembly-level
-  coverage row would govern it, citing that row. Use coverage_decision
-  "partial" and lower clause_clarity. Do NOT invent a dedicated row.
+- If the user names a SUB-COMPONENT (e.g. fuel rail, injector, water pump,
+  turbo) and evidence contains a parent-assembly coverage row (e.g. U06
+  Standard Engine Warranty, U06A Major Engine Components EPA17), you MUST
+  state that the part is governed by that assembly-level row. It is not
+  separately itemized. Set coverage_decision = "partial". Do NOT return
+  insufficient_evidence when a relevant parent-assembly row is present in
+  evidence — that is a reasoning failure.
 
 # TIE-BREAKING AND EDGE CASES
 - If two clauses conflict, prefer the clause that is more specific to the
